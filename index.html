@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DriveShare – Chia sẻ file</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <h1 id="title"><a href="./" style="color:inherit;text-decoration:none">📤 DriveShare</a></h1>
+  <p class="sub" id="subtitle">Chia sẻ file tạm thời – link tự hết hạn, không cần đăng nhập Google để tải.</p>
+
+  <!-- ===== ĐĂNG NHẬP (upload + admin) ===== -->
+  <div class="card hidden" id="loginCard">
+    <label for="pw" style="margin-top:0">Mật khẩu</label>
+    <input type="password" id="pw" placeholder="Nhập mật khẩu…" autocomplete="current-password">
+    <div style="margin-top:14px"><button class="btn full" id="loginBtn">Đăng nhập</button></div>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- ===== UPLOAD ===== -->
+  <div class="card hidden" id="upCard">
+    <div class="drop" id="drop">
+      <div class="big">☁️</div>
+      <div>Kéo &amp; thả file vào đây hoặc <b>bấm để chọn file</b></div>
+      <div class="small" style="margin-top:6px">Mỗi lần một file</div>
+      <input type="file" id="file" class="hidden">
+    </div>
+    <div class="fileinfo" id="fileinfo"></div>
+    <label>Thời hạn lưu</label>
+    <div class="days">
+      <input type="radio" name="days" id="d1" value="1"><label for="d1">1 ngày</label>
+      <input type="radio" name="days" id="d3" value="3"><label for="d3">3 ngày</label>
+      <input type="radio" name="days" id="d7" value="7" checked><label for="d7">7 ngày</label>
+      <input type="radio" name="days" id="d30" value="30"><label for="d30">30 ngày</label>
+    </div>
+    <label for="slug">Mã link tùy chọn (không bắt buộc)</label>
+    <div class="slugrow"><input type="text" id="slug" maxlength="50" placeholder="VD: hop-dong-2026 (để trống = mã ngẫu nhiên)" autocomplete="off"><button class="btn ghost" id="slugBtn" type="button">Kiểm tra</button></div>
+    <div class="slugst small" id="slugSt">Chỉ a-z, 0-9, “-”, “_”, dài 3–50 ký tự.</div>
+    <label for="note">Ghi chú (không bắt buộc)</label>
+    <textarea id="note" maxlength="500" placeholder="VD: Tài liệu họp ngày 15/10…"></textarea>
+    <div style="margin-top:16px"><button class="btn full" id="upBtn" disabled>Tải lên</button></div>
+    <div class="bar" id="bar"><div></div></div>
+    <div class="ptxt" id="ptxt"></div>
+    <div class="msg" id="upMsg"></div>
+    <div class="small" style="text-align:right;margin-top:8px"><a href="?admin">Quản trị</a> · <a href="#" class="logout">Đăng xuất</a></div>
+  </div>
+
+  <!-- ===== THÀNH CÔNG ===== -->
+  <div class="card hidden" id="doneCard">
+    <div class="msg ok" style="margin-top:0">✅ Tải lên thành công!</div>
+    <div class="code4box">
+      <div class="small" style="margin-bottom:6px">Mã số tải file (nhập vào ô “Đi tới”)</div>
+      <div class="code4" id="rCode">0000</div>
+      <button class="btn ghost sm" id="copyCode">📋 Sao chép mã</button>
+    </div>
+    <dl class="meta" style="margin:16px 0">
+      <dt>Tên file</dt><dd id="rName"></dd>
+      <dt>Dung lượng</dt><dd id="rSize"></dd>
+      <dt>Hết hạn</dt><dd id="rExp"></dd>
+    </dl>
+    <div class="linkrow"><input type="text" id="rLink" readonly><button class="btn" id="copyBtn">📋 Sao chép</button></div>
+    <div class="small" style="margin-top:6px">Link ngắn theo mã số: <a id="rCodeLink" href="#"></a></div>
+    <div class="qr" id="qr"></div>
+    <p class="small" style="text-align:center">Quét mã QR để mở link tải trên điện thoại</p>
+    <div class="msg err hidden" id="slugWarn">⚠️ Mã link vừa bị người khác dùng trước, hệ thống đã tạo mã ngẫu nhiên.</div>
+    <div class="msg err hidden" id="privWarn">⚠️ Tài khoản/domain không cho phép chia sẻ công khai. Người nhận chỉ tải được nếu file ≤ 20 MB.</div>
+    <button class="btn ghost full" id="againBtn" style="margin-top:12px">Tải file khác</button>
+  </div>
+
+  <!-- ===== TẢI FILE ===== -->
+  <div class="card hidden" id="loadingCard">Đang tải thông tin…</div>
+  <div class="card hidden" id="notfound">
+    <div style="font-size:42px;text-align:center">⌛</div>
+    <p style="text-align:center" id="nfText">File không tồn tại hoặc đã hết hạn.</p>
+    <p class="small" style="text-align:center">Kiểm tra lại link/mã, hoặc nhập link khác ở ô bên dưới.</p>
+  </div>
+  <div class="card hidden" id="infoCard">
+    <dl class="meta">
+      <dt>Tên file</dt><dd class="fname" id="fName"></dd>
+      <dt>Mã số</dt><dd><span class="code4sm" id="fCode"></span></dd>
+      <dt>Mã link</dt><dd id="fId"></dd>
+      <dt>Dung lượng</dt><dd id="fSize"></dd>
+      <dt>Ngày tải lên</dt><dd id="fCreated"></dd>
+      <dt>Hết hạn</dt><dd id="fExp"></dd>
+      <dt>Lượt tải</dt><dd id="fDl"></dd>
+    </dl>
+    <div id="noteWrap" class="hidden"><label>Ghi chú</label><div class="note" id="fNote"></div></div>
+    <div style="margin-top:20px"><a class="btn full" id="dlBtn" href="#" rel="noopener">⬇️ Tải xuống</a></div>
+    <p class="small" style="margin-top:10px">File lớn có thể hiện trang cảnh báo của Google Drive “không thể quét virus” – bấm <b>Vẫn tải xuống</b>.</p>
+    <div class="msg" id="dlMsg"></div>
+  </div>
+
+  <!-- ===== ADMIN ===== -->
+  <div class="card hidden" id="listCard">
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
+      <div id="stats" class="small" style="align-self:center"></div>
+      <div><button class="btn ghost sm" id="refresh">↻ Làm mới</button> <button class="btn ghost sm" id="cleanup">🧹 Dọn file hết hạn</button> <button class="btn ghost sm logout">Đăng xuất</button></div>
+    </div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>File / mã link</th><th>Dung lượng</th><th>Tải lên</th><th>Hết hạn</th><th>Lượt tải</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table></div>
+    <div class="msg" id="listMsg"></div>
+  </div>
+
+  <!-- ===== ĐI TỚI ===== -->
+  <div class="card goto" id="gotoCard">
+    <label for="gotoIn" style="margin-top:0">🔗 Đã có link hoặc mã? Mở trang tải</label>
+    <div class="linkrow"><input type="text" id="gotoIn" placeholder="Dán link, mã link hoặc mã 4 số, VD: 4821"><button class="btn" id="gotoBtn">Đi tới</button></div>
+    <div class="msg" id="gotoMsg"></div>
+  </div>
+  <div class="foot">DriveShare · Google Drive + Apps Script · <a href="./">Trang upload</a></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
